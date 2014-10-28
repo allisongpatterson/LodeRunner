@@ -9,13 +9,14 @@
 
 from graphics import *
 
-LEVEL_WIDTH = 20
+LEVEL_WIDTH = 35
 LEVEL_HEIGHT = 20    
 
 CELL_SIZE = 24
 WINDOW_WIDTH = CELL_SIZE*LEVEL_WIDTH
 WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 
+GR_OBS = {}
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -41,14 +42,43 @@ class Character (object):
     def same_loc (self,x,y):
         return (self._x == x and self._y == y)
 
+    def get_surroundings (self):
+        up = self._level[index(self._x, self._y-1)]
+        down = self._level[index(self._x, self._y+1)]
+        left = self._level[index(self._x-1, self._y)]
+        right = self._level[index(self._x+1, self._y)]
+
+        return {'u':up, 'd':down, 'l':left, 'r':right}
+
     def move (self,dx,dy):
         tx = self._x + dx
         ty = self._y + dy
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
-            if self._level[index(tx,ty)] == 0:
-                self._x = tx
-                self._y = ty
-                self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
+            old_pos = self._level[index(self._x,self._y)]
+            new_pos = self._level[index(tx,ty)]
+            if dx:
+                if new_pos == 1:
+                    return
+            if dy == 1:
+                if new_pos == 1:
+                    return
+            if dy == -1:
+                if old_pos != 2 or new_pos == 1:
+                    return
+
+            while new_pos == 0 and self._level[index(tx,ty+1)] in [0,3,4]:
+                ty += 1
+                dy += 1
+                new_pos = self._level[index(tx,ty)]
+
+            if new_pos == 4:
+                self._level[index(tx,ty)] = 0
+                sx, sy = screen_pos(tx,ty)
+                GR_OBS[(sx,sy)].undraw()
+
+            self._x = tx
+            self._y = ty
+            self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
                 
 
 class Player (Character):
@@ -85,7 +115,9 @@ def won (window):
 
 # 0 empty
 # 1 brick
-
+# 2 ladder
+# 3 rope
+# 4 gold
 
 def create_level (num):
     screen = [1,1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,0,
@@ -109,42 +141,27 @@ def create_level (num):
               1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,2,0,0,0,0,0,0,0,1,
               1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
-    screen = []
-    screen.extend([1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
-    screen.extend([1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1])
-    screen.extend([1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1])
-    screen.extend([1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
-    screen.extend([1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1])
-    screen.extend([1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1])
-    screen.extend([1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1])
-    screen.extend([1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,1])
-    screen.extend([1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1])
-    screen.extend([1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1])
-    screen.extend([1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1])
-    screen.extend([1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
-    screen.extend([1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1])
-    screen.extend([1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1])
-    screen.extend([1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1])
-    screen.extend([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1])
-    screen.extend([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
     return screen
 
 def create_screen (level,window):
-    # use this instead of Rectangle below for nicer screen
-    brick = 'brick.gif'
+
+    tiles = {
+        1: 'brick.gif',
+        2: 'ladder.gif',
+        3: 'rope.gif',
+        4: 'gold.gif'
+    }
+
+    
     def image (sx,sy,what):
         return Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2),what)
 
     for (index,cell) in enumerate(level):
         if cell != 0:
             (sx,sy) = screen_pos_index(index)
-            elt = Rectangle(Point(sx+1,sy+1),
-                            Point(sx+CELL_SIZE-1,sy+CELL_SIZE-1))
-            elt.setFill('sienna')
+            elt = image(sx, sy, tiles[cell])
             elt.draw(window)
+            GR_OBS[(sx,sy)] = elt
 
 
 MOVE = {
@@ -172,11 +189,11 @@ def main ():
 
     screen = create_screen(level,window)
 
-    p = Player(10,18,window,level)
+    p = Player(17,18,window,level)
 
-    baddie1 = Baddie(5,1,window,level,p)
-    baddie2 = Baddie(10,1,window,level,p)
-    baddie3 = Baddie(15,1,window,level,p)
+    # baddie1 = Baddie(5,1,window,level,p)
+    # baddie2 = Baddie(10,1,window,level,p)
+    # baddie3 = Baddie(15,1,window,level,p)
 
     while not p.at_exit():
         key = window.checkKey()
