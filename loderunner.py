@@ -16,7 +16,7 @@ CELL_SIZE = 24
 WINDOW_WIDTH = CELL_SIZE*LEVEL_WIDTH
 WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 
-GR_OBS = {}
+GR_OBS = {'hidden':[]}
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -63,24 +63,38 @@ class Character (object):
                 if new_pos == 1:
                     return
             if dy == -1:
-                if old_pos != 2 or new_pos == 1:
+                if old_pos not in (2,9) or new_pos == 1:
                     return
 
-            while new_pos == 0 and self._level[index(tx,ty+1)] in [0,3,4]:
+            while new_pos == 0 and self._level[index(tx,ty+1)] in (0,3,4):
                 ty += 1
                 dy += 1
                 new_pos = self._level[index(tx,ty)]
 
-            if new_pos == 4:
-                self._level[index(tx,ty)] = 0
-                sx, sy = screen_pos(tx,ty)
-                GR_OBS[(sx,sy)].undraw()
-                gold_gone(self._level,self._window)
                 
             self._x = tx
             self._y = ty
             self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
-        has_win(self._x,self._y,self._level,self._window)
+
+
+class Player (Character):
+    def __init__ (self,x,y,window,level):
+        Character.__init__(self,'t_android.gif',x,y,window,level)
+
+    def at_exit (self):
+        return (self._y == 0)
+
+    def pickup_gold (self):
+        tx = self._x
+        ty = self._y
+        if self._level[index(tx,ty)] == 4:
+            self._level[index(tx,ty)] = 0
+            sx, sy = screen_pos(tx,ty)
+            GR_OBS[(sx,sy)].undraw()
+
+        if 4 not in self._level:
+            for hl in GR_OBS['hidden']:
+                hl.undraw()
 
     def make_hole (self, tx, ty):
         self._level[index(tx,ty)] = 0
@@ -93,53 +107,9 @@ class Character (object):
         if self._level[index(tx,ty)] == 1 and self._level[index(tx,self._y)] == 0:
             self.make_hole(tx,ty)
 
-
-def gold_gone(level,window):
-    if 4 not in level:
-        win_ladder(level,window)
-    # else:
-    #     print 'still gold left'
-
-def win_ladder(level,window):
-    tiles = {
-            1: 'brick.gif',
-            2: 'ladder.gif',
-            3: 'rope.gif',
-            4: 'gold.gif'
-            }
-
-    x = 34
-    level[index(x,0)] = 2
-    a,b = screen_pos(x,0)
-    elt1 = Image(Point(a+CELL_SIZE/2,b+CELL_SIZE/2),tiles[2])
-    elt1.draw(window)
-
-    level[index(x,1)] = 2
-    c,d = screen_pos(x,1)
-    elt2 = Image(Point(c+CELL_SIZE/2,d+CELL_SIZE/2),tiles[2])
-    elt2.draw(window)
-
-    level[index(x,2)] = 2
-    e,f = screen_pos(x,2)
-    elt3 = Image(Point(e+CELL_SIZE/2,f+CELL_SIZE/2),tiles[2])
-    elt3.draw(window)
-
-def has_win(x,y,level,window):
-    if x == 34 and y == 0:
-        won(window)
-    
-
-class Player (Character):
-    def __init__ (self,x,y,window,level):
-        Character.__init__(self,'android.gif',x,y,window,level)
-
-    def at_exit (self):
-        return (self._y == 0)
-
-
 class Baddie (Character):
     def __init__ (self,x,y,window,level,player):
-        Character.__init__(self,'red.gif',x,y,window,level)
+        Character.__init__(self,'t_red.gif',x,y,window,level)
         self._player = player
 
 
@@ -166,11 +136,12 @@ def won (window):
 # 2 ladder
 # 3 rope
 # 4 gold
+# 9 hidden ladder
 
 def create_level (num):
-    screen = [1,1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,0,
-              1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-              1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,
+    screen = [1,1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,9,
+              1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,
+              1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,9,
               1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,
               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,1,2,1,0,0,0,1,2,0,1,
               0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,1,1,1,1,
@@ -218,7 +189,8 @@ def create_screen (level,window):
         1: 'brick.gif',
         2: 'ladder.gif',
         3: 'rope.gif',
-        4: 'gold.gif'
+        4: 'gold.gif',
+        9: 'ladder.gif'
     }
 
     
@@ -231,6 +203,12 @@ def create_screen (level,window):
             elt = image(sx, sy, tiles[cell])
             elt.draw(window)
             GR_OBS[(sx,sy)] = elt
+        if cell == 9:
+            elt = Rectangle(Point(sx,sy), Point(sx+CELL_SIZE,sy+CELL_SIZE))
+            elt.setFill('white')
+            elt.setOutline('white')
+            elt.draw(window)
+            GR_OBS['hidden'].append(elt)
 
 
 MOVE = {
@@ -275,6 +253,7 @@ def main ():
         if key in MOVE:
             (dx,dy) = MOVE[key]
             p.move(dx,dy)
+            p.pickup_gold()
         if key in DIG:
             dx = DIG[key]
             p.dig(dx)
