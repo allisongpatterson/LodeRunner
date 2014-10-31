@@ -82,6 +82,18 @@ class Character (object):
             self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
         has_win(self._x,self._y,self._level,self._window)
 
+    def make_hole (self, tx, ty):
+        self._level[index(tx,ty)] = 0
+        sx, sy = screen_pos(tx,ty)
+        GR_OBS[(sx,sy)].undraw()
+
+    def dig (self,dx):
+        tx = self._x + dx
+        ty = self._y + 1
+        if self._level[index(tx,ty)] == 1 and self._level[index(tx,self._y)] == 0:
+            self.make_hole(tx,ty)
+
+
 def gold_gone(level,window):
     if 4 not in level:
         win_ladder(level,window)
@@ -227,7 +239,10 @@ MOVE = {
     'Up' : (0,-1),
     'Down' : (0,1)
 }
-
+DIG = {
+    'z': -1,
+    'x': 1
+}
 
 def main ():
 
@@ -260,6 +275,9 @@ def main ():
         if key in MOVE:
             (dx,dy) = MOVE[key]
             p.move(dx,dy)
+        if key in DIG:
+            dx = DIG[key]
+            p.dig(dx)
 
         # baddies should probably move here
 
