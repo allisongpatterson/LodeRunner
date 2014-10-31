@@ -8,6 +8,7 @@
 
 
 from graphics import *
+import random
 
 LEVEL_WIDTH = 35
 LEVEL_HEIGHT = 20    
@@ -17,6 +18,8 @@ WINDOW_WIDTH = CELL_SIZE*LEVEL_WIDTH
 WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 
 GR_OBS = {'hidden':[]}
+
+BADDIE_DELAY = 1000
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -29,8 +32,36 @@ def screen_pos_index (index):
 def index (x,y):
     return x + (y*LEVEL_WIDTH)
 
+class Queue (object):
+    def __init__ (self):
+        self._queue = []
+
+    def enqueue (self,delay,obj):
+        self._queue.append((delay, obj))
+        self._queue.sort()
+        # print self._queue
+
+    def dequeue_if_ready (self):
+        while self._queue[0][0] == 0:
+            evt = self._queue.pop(0)
+            evt[1].event(self)
+        self._queue = [(x-1,obj) for x,obj in self._queue]
+
+class Hole (object):
+    def __init__ (self,x,y,window,level):
+        self._x = x
+        self._y = y
+        self._window = window
+        self._level = level
+
+    def event (self,q):        
+        sx,sy = screen_pos(self._x,self._y)
+        self._level[index(self._x,self._y)] = 1
+        GR_OBS[(sx,sy)].draw(self._window)
+
+
 class Character (object):
-    def __init__ (self,pic,x,y,window,level):
+    def __init__ (self,pic,x,y,window,level,q):
         (sx,sy) = screen_pos(x,y)
         self._img = Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2+2),pic)
         self._window = window
@@ -38,6 +69,7 @@ class Character (object):
         self._x = x
         self._y = y
         self._level = level
+        self._q = q
 
     def same_loc (self,x,y):
         return (self._x == x and self._y == y)
@@ -78,8 +110,8 @@ class Character (object):
 
 
 class Player (Character):
-    def __init__ (self,x,y,window,level):
-        Character.__init__(self,'t_android.gif',x,y,window,level)
+    def __init__ (self,x,y,window,level,q):
+        Character.__init__(self,'t_android.gif',x,y,window,level,q)
 
     def at_exit (self):
         return (self._y == 0)
@@ -95,11 +127,14 @@ class Player (Character):
         if 4 not in self._level:
             for hl in GR_OBS['hidden']:
                 hl.undraw()
-
+        
     def make_hole (self, tx, ty):
         self._level[index(tx,ty)] = 0
         sx, sy = screen_pos(tx,ty)
         GR_OBS[(sx,sy)].undraw()
+
+        hole = Hole(tx,ty,self._window,self._level)
+        self._q.enqueue(1000,hole)
 
     def dig (self,dx):
         tx = self._x + dx
@@ -108,10 +143,16 @@ class Player (Character):
             self.make_hole(tx,ty)
 
 class Baddie (Character):
-    def __init__ (self,x,y,window,level,player):
-        Character.__init__(self,'t_red.gif',x,y,window,level)
+    def __init__ (self,x,y,window,level,player,q):
+        Character.__init__(self,'t_red.gif',x,y,window,level,q)
         self._player = player
 
+    def event (self,q):
+        if self._player.same_loc(self._x,self._y):
+            lost(self._window)
+        dx,dy = random.choice([(0,1),(0,-1),(1,0),(-1,0)])
+        self.move(dx,dy)
+        q.enqueue(BADDIE_DELAY, self)
 
 def lost (window):
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
@@ -239,11 +280,16 @@ def main ():
 
     screen = create_screen(level,window)
 
-    p = Player(17,18,window,level)
+    q = Queue()
 
-    # baddie1 = Baddie(5,1,window,level,p)
-    # baddie2 = Baddie(10,1,window,level,p)
-    # baddie3 = Baddie(15,1,window,level,p)
+    p = Player(17,18,window,level,q)
+
+    baddie1 = Baddie(5,2,window,level,p,q)
+    baddie2 = Baddie(20,2,window,level,p,q)
+    baddie3 = Baddie(15,7,window,level,p,q)
+    q.enqueue(BADDIE_DELAY, baddie1)
+    q.enqueue(BADDIE_DELAY, baddie2)
+    q.enqueue(BADDIE_DELAY, baddie3)
 
     while not p.at_exit():
         key = window.checkKey()
@@ -257,6 +303,8 @@ def main ():
         if key in DIG:
             dx = DIG[key]
             p.dig(dx)
+
+        q.dequeue_if_ready()
 
         # baddies should probably move here
 
