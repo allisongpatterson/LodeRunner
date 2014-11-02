@@ -152,12 +152,21 @@ class Baddie (Character):
         Character.__init__(self,'t_red.gif',x,y,window,level,q)
         self._player = player
 
+    def dist_to_player(self):
+        dx = self._player._x - self._x
+        dy = self._player._y - self._y
+        return dx,dy
+
     def event (self,q):
         if self._player.same_loc(self._x,self._y):
             lost(self._window)
-        dx,dy = random.choice([(0,1),(0,-1),(1,0),(-1,0)])
+        distx,disty = self.dist_to_player()
+        dx,dy = random.choice([(0,sign(disty)),(sign(distx),0)])
         self.move(dx,dy)
         q.enqueue(BADDIE_DELAY, self)           
+
+def sign (x):
+    return (x > 0) - (x < 0)
 
 def lost (window):
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
