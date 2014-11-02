@@ -72,6 +72,9 @@ class Character (object):
         self._level = level
         self._q = q
 
+    def erase (self):
+        self._img.undraw()
+
     def same_loc (self,x,y):
         return (self._x == x and self._y == y)
 
@@ -158,12 +161,20 @@ class Baddie (Character):
         return dx,dy
 
     def event (self,q):
-        if self._player.same_loc(self._x,self._y):
-            lost(self._window)
-        distx,disty = self.dist_to_player()
-        dx,dy = random.choice([(0,sign(disty)),(sign(distx),0)])
-        self.move(dx,dy)
-        q.enqueue(BADDIE_DELAY, self)           
+        if not self.is_crushed():
+            if self._player.same_loc(self._x,self._y):
+                lost(self._window)
+            distx,disty = self.dist_to_player()
+            dx,dy = random.choice([(0,sign(disty)),(sign(distx),0)])
+            self.move(dx,dy)
+            q.enqueue(BADDIE_DELAY, self)  
+        else:
+            self.erase()
+
+    def is_crushed (self):
+        if self._level[index(self._x,self._y)] == 1:
+            return True
+
 
 def sign (x):
     return (x > 0) - (x < 0)
@@ -315,7 +326,6 @@ def main ():
             (dx,dy) = MOVE[key]
             p.move(dx,dy)
             p.pickup_gold()
-            #p.get_crushed()
         if key in DIG:
             dx = DIG[key]
             p.dig(dx)
