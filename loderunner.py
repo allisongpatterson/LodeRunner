@@ -47,6 +47,7 @@ class Queue (object):
             evt[1].event(self)
         self._queue = [(x-1,obj) for x,obj in self._queue]
 
+
 class Hole (object):
     def __init__ (self,x,y,window,level):
         self._x = x
@@ -98,12 +99,12 @@ class Character (object):
                 if old_pos not in (2,9) or new_pos == 1:
                     return
 
-            while new_pos == 0 and self._level[index(tx,ty+1)] in (0,3,4):
+            while new_pos == 0 and ty < 19 and self._level[index(tx,ty+1)] in (0,3,4):
                 ty += 1
                 dy += 1
                 new_pos = self._level[index(tx,ty)]
 
-                
+
             self._x = tx
             self._y = ty
             self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
@@ -134,13 +135,17 @@ class Player (Character):
         GR_OBS[(sx,sy)].undraw()
 
         hole = Hole(tx,ty,self._window,self._level)
-        self._q.enqueue(1000,hole)
+        self._q.enqueue(20000,hole)
 
     def dig (self,dx):
         tx = self._x + dx
         ty = self._y + 1
         if self._level[index(tx,ty)] == 1 and self._level[index(tx,self._y)] == 0:
             self.make_hole(tx,ty)
+
+    def is_crushed (self):
+        if self._level[index(self._x,self._y)] == 1:
+            lost(self._window)
 
 class Baddie (Character):
     def __init__ (self,x,y,window,level,player,q):
@@ -152,7 +157,7 @@ class Baddie (Character):
             lost(self._window)
         dx,dy = random.choice([(0,1),(0,-1),(1,0),(-1,0)])
         self.move(dx,dy)
-        q.enqueue(BADDIE_DELAY, self)
+        q.enqueue(BADDIE_DELAY, self)           
 
 def lost (window):
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
@@ -201,9 +206,9 @@ def create_level (num):
               1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,2,0,0,0,0,0,0,0,1,
               1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
-    # screen = [1,1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,0,
-    #           1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    #           1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,
+    # screen = [1,1,1,1,1,1,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,9,
+    #           1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,
+    #           1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,9,
     #           1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,
     #           0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,1,2,1,0,0,0,1,2,0,1,
     #           0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,1,1,1,1,
@@ -293,6 +298,7 @@ def main ():
 
     while not p.at_exit():
         key = window.checkKey()
+        p.is_crushed()
         if key == 'q':
             window.close()
             exit(0)
@@ -300,6 +306,7 @@ def main ():
             (dx,dy) = MOVE[key]
             p.move(dx,dy)
             p.pickup_gold()
+            #p.get_crushed()
         if key in DIG:
             dx = DIG[key]
             p.dig(dx)
