@@ -9,6 +9,7 @@
 
 from graphics import *
 import random
+import time
 
 LEVEL_WIDTH = 35
 LEVEL_HEIGHT = 20    
@@ -19,7 +20,8 @@ WINDOW_HEIGHT = CELL_SIZE*LEVEL_HEIGHT
 
 GR_OBS = {'hidden':[]}
 
-BADDIE_DELAY = 1000
+BADDIE_DELAY = 25
+HOLE_DELAY = 350
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -138,13 +140,14 @@ class Player (Character):
         GR_OBS[(sx,sy)].undraw()
 
         hole = Hole(tx,ty,self._window,self._level)
-        self._q.enqueue(20000,hole)
+        self._q.enqueue(HOLE_DELAY,hole)
 
     def dig (self,dx):
-        tx = self._x + dx
-        ty = self._y + 1
-        if self._level[index(tx,ty)] == 1 and self._level[index(tx,self._y)] == 0:
-            self.make_hole(tx,ty)
+        if self._y != LEVEL_HEIGHT - 1:
+            tx = self._x + dx
+            ty = self._y + 1
+            if self._level[index(tx,ty)] == 1 and self._level[index(tx,self._y)] == 0:
+                self.make_hole(tx,ty)
 
     def is_crushed (self):
         if self._level[index(self._x,self._y)] == 1:
@@ -332,7 +335,7 @@ def main ():
 
         q.dequeue_if_ready()
 
-        # baddies should probably move here
+        time.sleep(.01)
 
     won(window)
 
