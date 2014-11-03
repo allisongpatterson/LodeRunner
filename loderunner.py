@@ -4,7 +4,7 @@
 # Jacob Kingery and Allison Patterson
 #
 # We added better-than-nothing baddie AI, non-teleporting falling,
-# and sound effects.
+# sound effects, and background music.
 #
 # Sounds used:
 # http://freesound.org/people/WIM/sounds/19914/ (cut from)
@@ -12,6 +12,9 @@
 # http://freesound.org/people/GabrielAraujo/sounds/242503/
 # http://freesound.org/people/fotoshop/sounds/47356/
 # http://freesound.org/people/Zott820/sounds/209578/
+#
+# Background music:
+# http://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400024
 
 
 from graphics import *
@@ -31,18 +34,13 @@ GR_OBS = {'hidden':[]}
 BADDIE_DELAY = 25
 HOLE_DELAY = 350
 
-# Audio setup
+# Sound effect setup
 pygame.mixer.init(44100,-16,2,4096)
-gold_file = 'gold_snd.wav'
-fall_file = 'fall_snd.wav'
-dig_file = 'dig_snd.wav'
-win_file = 'win_snd.wav'
-lose_file = 'lose_snd.wav'
-GOLD_SND = pygame.mixer.Sound(gold_file)
-FALL_SND = pygame.mixer.Sound(fall_file)
-DIG_SND = pygame.mixer.Sound(dig_file)
-WIN_SND = pygame.mixer.Sound(win_file)
-LOSE_SND = pygame.mixer.Sound(lose_file)
+GOLD_SND = pygame.mixer.Sound('gold_snd.wav')
+FALL_SND = pygame.mixer.Sound('fall_snd.wav')
+DIG_SND = pygame.mixer.Sound('dig_snd.wav')
+WIN_SND = pygame.mixer.Sound('win_snd.wav')
+LOSE_SND = pygame.mixer.Sound('lose_snd.wav')
 
 
 def screen_pos (x,y):
@@ -130,15 +128,15 @@ class Character (object):
             self._x = tx
             self._y = ty
             self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
-            self.should_fall(self._x,self._y)
+            self.should_fall()
             if self._fell:
                 FALL_SND.play()
 
 
-    def should_fall (self,x,y):
+    def should_fall (self):
         if self._y < LEVEL_HEIGHT - 1:
-            curr = self._level[index(x,y)]
-            below = self._level[index(x,y+1)]
+            curr = self._level[index(self._x,self._y)]
+            below = self._level[index(self._x,self._y+1)]
             if curr == 0 and below in (0,3,4):
                 time.sleep(.08)
                 self.fall()
@@ -150,7 +148,7 @@ class Character (object):
             self._img.move(0,1*CELL_SIZE)
             self._y +=1
             time.sleep(.05)
-            self.should_fall(self._x,self._y)
+            self.should_fall()
 
 class Player (Character):
     def __init__ (self,x,y,window,level,q):
@@ -204,8 +202,6 @@ class Baddie (Character):
 
     def event (self,q):
         if not self.is_crushed():
-            if self._player.same_loc(self._x,self._y):
-                lost(self._window)
             distx,disty = self.dist_to_player()
             dx,dy = random.choice([(0,sign(disty)),(sign(distx),0)])
             self.move(dx,dy)
@@ -228,6 +224,7 @@ def lost (window):
     t.setTextColor('red')
     t.draw(window)
     window.getKey()
+    time.sleep(.5)
     exit(0)
 
 def won (window):
@@ -354,12 +351,18 @@ def main ():
 
     p = Player(17,18,window,level,q)
 
-    baddie1 = Baddie(5,2,window,level,p,q)
-    baddie2 = Baddie(20,2,window,level,p,q)
-    baddie3 = Baddie(15,7,window,level,p,q)
-    q.enqueue(BADDIE_DELAY, baddie1)
-    q.enqueue(BADDIE_DELAY, baddie2)
-    q.enqueue(BADDIE_DELAY, baddie3)
+    # Baddie creation and event enqueuement
+    BADDIES = [
+               Baddie(32,11,window,level,p,q),
+               Baddie(33,4,window,level,p,q),
+               Baddie(15,7,window,level,p,q),
+            ]
+    for baddie in BADDIES:
+        q.enqueue(BADDIE_DELAY, baddie)
+
+    # Background music
+    pygame.mixer.music.load('background.mp3')
+    pygame.mixer.music.play(-1)
 
     while not p.at_exit():
         key = window.checkKey()
@@ -375,6 +378,14 @@ def main ():
             dx = DIG[key]
             p.dig(dx)
 
+        # Check if player and baddie are on same tile or if 
+        # baddie should fall (from hole being dug underneath)
+        for baddie in BADDIES:
+            if p.same_loc(baddie._x,baddie._y):
+                lost(window)
+            baddie.should_fall()
+
+        # Process event queue
         q.dequeue_if_ready()
 
         time.sleep(.01)
