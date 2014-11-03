@@ -1,13 +1,21 @@
 #
-# MAZE
+# LODE RUNNER
 # 
-# Example game
+# Jacob Kingery and Allison Patterson
 #
-# Version without baddies running around
+# We added better-than-nothing baddie AI, non-teleporting falling,
+# and sound effects.
 #
+# Sounds used:
+# http://freesound.org/people/WIM/sounds/19914/ (cut from)
+# http://freesound.org/people/GabrielAraujo/sounds/242501/
+# http://freesound.org/people/GabrielAraujo/sounds/242503/
+# http://freesound.org/people/fotoshop/sounds/47356/
+# http://freesound.org/people/Zott820/sounds/209578/
 
 
 from graphics import *
+import pygame.mixer  # For sound effects only
 import random
 import time
 
@@ -22,6 +30,20 @@ GR_OBS = {'hidden':[]}
 
 BADDIE_DELAY = 25
 HOLE_DELAY = 350
+
+# Audio setup
+pygame.mixer.init(44100,-16,2,4096)
+gold_file = 'gold_snd.wav'
+fall_file = 'fall_snd.wav'
+dig_file = 'dig_snd.wav'
+win_file = 'win_snd.wav'
+lose_file = 'lose_snd.wav'
+GOLD_SND = pygame.mixer.Sound(gold_file)
+FALL_SND = pygame.mixer.Sound(fall_file)
+DIG_SND = pygame.mixer.Sound(dig_file)
+WIN_SND = pygame.mixer.Sound(win_file)
+LOSE_SND = pygame.mixer.Sound(lose_file)
+
 
 def screen_pos (x,y):
     return (x*CELL_SIZE+10,y*CELL_SIZE+10)
@@ -72,6 +94,7 @@ class Character (object):
         self._y = y
         self._level = level
         self._q = q
+        self._fell = 0
 
     def erase (self):
         self._img.undraw()
@@ -88,6 +111,7 @@ class Character (object):
         return {'u':up, 'd':down, 'l':left, 'r':right}
 
     def move (self,dx,dy):
+        self._fell = 0
         tx = self._x + dx
         ty = self._y + dy
         if tx >= 0 and ty >= 0 and tx < LEVEL_WIDTH and ty < LEVEL_HEIGHT:
@@ -107,23 +131,26 @@ class Character (object):
             self._y = ty
             self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
             self.should_fall(self._x,self._y)
+            if self._fell:
+                FALL_SND.play()
 
 
     def should_fall (self,x,y):
-        curr = self._level[index(x,y)]
-        below = self._level[index(x,y+1)]
-        if curr == 0 and self._y < 19 and below in (0,3,4):
-            time.sleep(.08)
-            self.fall()
-        return
+        if self._y < LEVEL_HEIGHT - 1:
+            curr = self._level[index(x,y)]
+            below = self._level[index(x,y+1)]
+            if curr == 0 and below in (0,3,4):
+                time.sleep(.08)
+                self.fall()
+
 
     def fall (self):
         if self._level[index(self._x,self._y)] != 3 and self._level[index(self._x,self._y+1)] != 1:
+            self._fell = 1
             self._img.move(0,1*CELL_SIZE)
             self._y +=1
             time.sleep(.05)
             self.should_fall(self._x,self._y)
-
 
 class Player (Character):
     def __init__ (self,x,y,window,level,q):
@@ -136,6 +163,7 @@ class Player (Character):
         tx = self._x
         ty = self._y
         if self._level[index(tx,ty)] == 4:
+            GOLD_SND.play()
             self._level[index(tx,ty)] = 0
             sx, sy = screen_pos(tx,ty)
             GR_OBS[(sx,sy)].undraw()
@@ -157,6 +185,7 @@ class Player (Character):
             tx = self._x + dx
             ty = self._y + 1
             if self._level[index(tx,ty)] == 1 and self._level[index(tx,self._y)] == 0:
+                DIG_SND.play()
                 self.make_hole(tx,ty)
 
     def is_crushed (self):
@@ -193,6 +222,7 @@ def sign (x):
     return (x > 0) - (x < 0)
 
 def lost (window):
+    LOSE_SND.play()
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU LOST!')
     t.setSize(36)
     t.setTextColor('red')
@@ -201,6 +231,7 @@ def lost (window):
     exit(0)
 
 def won (window):
+    WIN_SND.play()
     t = Text(Point(WINDOW_WIDTH/2+10,WINDOW_HEIGHT/2+10),'YOU WON!')
     t.setSize(36)
     t.setTextColor('red')
@@ -302,7 +333,8 @@ DIG = {
 }
 
 def main ():
-
+    
+    # Graphics setup
     window = GraphWin("Maze", WINDOW_WIDTH+20, WINDOW_HEIGHT+20)
 
     rect = Rectangle(Point(5,5),Point(WINDOW_WIDTH+15,WINDOW_HEIGHT+15))
