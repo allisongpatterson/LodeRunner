@@ -9,6 +9,7 @@
 
 from graphics import *
 import random
+import time
 
 LEVEL_WIDTH = 35
 LEVEL_HEIGHT = 20    
@@ -39,7 +40,6 @@ class Queue (object):
     def enqueue (self,delay,obj):
         self._queue.append((delay, obj))
         self._queue.sort()
-        # print self._queue
 
     def dequeue_if_ready (self):
         while self._queue[0][0] == 0:
@@ -102,15 +102,26 @@ class Character (object):
                 if old_pos not in (2,9) or new_pos == 1:
                     return
 
-            while new_pos == 0 and ty < 19 and self._level[index(tx,ty+1)] in (0,3,4):
-                ty += 1
-                dy += 1
-                new_pos = self._level[index(tx,ty)]
-
-
             self._x = tx
             self._y = ty
             self._img.move(dx*CELL_SIZE,dy*CELL_SIZE)
+            self.should_fall(self._x,self._y)
+
+
+    def should_fall (self,x,y):
+        curr = self._level[index(x,y)]
+        below = self._level[index(x,y+1)]
+        if curr == 0 and self._y < 19 and below in (0,3,4):
+            time.sleep(.08)
+            self.fall()
+        return
+
+    def fall (self):
+        if self._level[index(self._x,self._y)] != 3 and self._level[index(self._x,self._y+1)] != 1:
+            self._img.move(0,1*CELL_SIZE)
+            self._y +=1
+            time.sleep(.05)
+            self.should_fall(self._x,self._y)
 
 
 class Player (Character):
