@@ -36,11 +36,11 @@ HOLE_DELAY = 350
 
 # Sound effect setup
 pygame.mixer.init(44100,-16,2,4096)
-GOLD_SND = pygame.mixer.Sound('gold_snd.wav')
-FALL_SND = pygame.mixer.Sound('fall_snd.wav')
-DIG_SND = pygame.mixer.Sound('dig_snd.wav')
-WIN_SND = pygame.mixer.Sound('win_snd.wav')
-LOSE_SND = pygame.mixer.Sound('lose_snd.wav')
+GOLD_SND = pygame.mixer.Sound('sounds/gold_snd.wav')
+FALL_SND = pygame.mixer.Sound('sounds/fall_snd.wav')
+DIG_SND = pygame.mixer.Sound('sounds/dig_snd.wav')
+WIN_SND = pygame.mixer.Sound('sounds/win_snd.wav')
+LOSE_SND = pygame.mixer.Sound('sounds/lose_snd.wav')
 
 
 def screen_pos (x,y):
@@ -152,7 +152,7 @@ class Character (object):
 
 class Player (Character):
     def __init__ (self,x,y,window,level,q):
-        Character.__init__(self,'t_android.gif',x,y,window,level,q)
+        Character.__init__(self,'sprites/t_android.gif',x,y,window,level,q)
 
     def at_exit (self):
         return (self._y == 0)
@@ -192,7 +192,7 @@ class Player (Character):
 
 class Baddie (Character):
     def __init__ (self,x,y,window,level,player,q):
-        Character.__init__(self,'t_red.gif',x,y,window,level,q)
+        Character.__init__(self,'sprites/t_red.gif',x,y,window,level,q)
         self._player = player
 
     def dist_to_player(self):
@@ -293,11 +293,11 @@ def create_level (num):
 def create_screen (level,window):
 
     tiles = {
-        1: 'brick.gif',
-        2: 'ladder.gif',
-        3: 'rope.gif',
-        4: 'gold.gif',
-        9: 'ladder.gif'
+        1: 'sprites/brick.gif',
+        2: 'sprites/ladder.gif',
+        3: 'sprites/rope.gif',
+        4: 'sprites/gold.gif',
+        9: 'sprites/ladder.gif'
     }
 
     
@@ -361,7 +361,7 @@ def main ():
         q.enqueue(BADDIE_DELAY, baddie)
 
     # Background music
-    pygame.mixer.music.load('background.mp3')
+    pygame.mixer.music.load('sounds/background.mp3')
     pygame.mixer.music.play(-1)
 
     while not p.at_exit():

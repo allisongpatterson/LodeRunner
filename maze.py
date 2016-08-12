@@ -53,7 +53,7 @@ class Character (object):
 
 class Player (Character):
     def __init__ (self,x,y,window,level):
-        Character.__init__(self,'android.gif',x,y,window,level)
+        Character.__init__(self,'sprites/t_android.gif',x,y,window,level)
 
     def at_exit (self):
         return (self._y == 0)
@@ -61,7 +61,7 @@ class Player (Character):
 
 class Baddie (Character):
     def __init__ (self,x,y,window,level,player):
-        Character.__init__(self,'red.gif',x,y,window,level)
+        Character.__init__(self,'sprites/t_red.gif',x,y,window,level)
         self._player = player
 
 
@@ -113,7 +113,7 @@ def create_level (num):
 
 def create_screen (level,window):
     # use this instead of Rectangle below for nicer screen
-    brick = 'brick.gif'
+    brick = 'sprites/brick.gif'
     def image (sx,sy,what):
         return Image(Point(sx+CELL_SIZE/2,sy+CELL_SIZE/2),what)
 
